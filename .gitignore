@@ -1,0 +1,25 @@
+# 排除大模型文件
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# 排除缓存和临时文件
+__pycache__/
+*.pyc
+*.pyo
+.cache/
+
+# 排除结果文件
+results/checkpoints/
+results/logs/
+
+# 排除数据缓存
+data/cache/
+data/processed/
+
+# 排除其他临时文件
+*.log
+.DS_Store
+Thumbs.db

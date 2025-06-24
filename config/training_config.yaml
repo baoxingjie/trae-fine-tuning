@@ -1,0 +1,104 @@
+# Qwen大模型微调配置文件
+
+# 模型配置
+model:
+  model_name_or_path: "Qwen/Qwen-7B-Chat"  # 基础模型路径
+  model_type: "qwen"
+  trust_remote_code: true
+  torch_dtype: "bfloat16"  # 使用bfloat16精度
+  attn_implementation: "eager"  # 使用标准attention实现，Qwen不支持flash_attention_2
+
+# 数据配置
+data:
+  dataset_name: "alpaca_gpt4_data"  # 主要数据集
+  additional_datasets:
+    - "OpenAssistant/oasst1"
+    - "yahma/alpaca-cleaned"
+  max_seq_length: 2048
+  train_split: "train"
+  validation_split: "validation"
+  test_split: "test"
+  data_cache_dir: "./data/cache"
+
+# 训练参数 (针对RTX A5000 16GB优化)
+training:
+  output_dir: "./results/checkpoints"
+  num_train_epochs: 3
+  per_device_train_batch_size: 6  # 增加批次大小，充分利用16GB显存
+  per_device_eval_batch_size: 12  # 评估时可以使用更大批次
+  gradient_accumulation_steps: 3  # 调整梯度累积，保持有效批次大小18
+  learning_rate: 0.00003  # 稍微提高学习率，配合更大批次
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  lr_scheduler_type: "cosine"
+  
+  # 保存和评估
+  save_strategy: "steps"
+  save_steps: 300  # 更频繁保存，防止意外丢失
+  eval_strategy: "steps"
+  eval_steps: 300  # 更频繁评估，及时发现问题
+  logging_steps: 50   # 更频繁日志记录
+  save_total_limit: 5  # 保留更多检查点
+  
+  # 优化器 (针对RTX A5000优化)
+  optim: "adamw_torch_fused"  # 使用融合优化器，提升性能
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 1e-8
+  max_grad_norm: 1.0
+
+# LoRA配置 (针对RTX A5000优化)
+lora:
+  use_lora: true
+  r: 32  # 增加LoRA秩，提升模型表达能力
+  lora_alpha: 64  # 相应调整alpha值
+  lora_dropout: 0.05  # 降低dropout，利用更大显存
+  target_modules:
+    - "c_attn"  # Qwen的注意力投影层
+    - "c_proj"  # Qwen的输出投影层
+    - "w1"      # Qwen的MLP第一层
+    - "w2"      # Qwen的MLP第二层
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
+# 量化配置 (RTX A5000显存充足，可选择性使用)
+quantization:
+  use_4bit: false  # RTX A5000 16GB显存充足，关闭量化获得更好性能
+  bnb_4bit_compute_dtype: "bfloat16"
+  bnb_4bit_use_double_quant: true
+  bnb_4bit_quant_type: "nf4"
+
+# MindSpeed配置
+mindspeed:
+  enable: true
+  parallel_mode: "data_parallel"  # 数据并行
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  micro_batch_size: 1
+  
+# 监控和日志
+logging:
+  report_to: ["tensorboard"]  # 只使用tensorboard，避免wandb API密钥问题
+  logging_dir: "./results/logs"
+  run_name: "qwen_finetune_experiment"
+  
+# 环境配置 (针对RTX A5000优化)
+environment:
+  seed: 42
+  dataloader_num_workers: 0  # 设置为0避免Windows下的多进程pickle错误
+  remove_unused_columns: false
+  fp16: false
+  bf16: true  # RTX A5000原生支持bfloat16
+  gradient_checkpointing: false  # 显存充足时关闭，提升训练速度
+  dataloader_pin_memory: true
+  torch_compile: true  # 启用PyTorch编译优化
+  ddp_find_unused_parameters: false  # 优化分布式训练
+
+# 推理配置
+inference:
+  max_new_tokens: 512
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 50
+  repetition_penalty: 1.1

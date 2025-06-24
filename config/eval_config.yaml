@@ -1,0 +1,165 @@
+# 模型评测配置文件
+
+# 模型配置
+model:
+  model_path: "./results/checkpoints"  # 微调后的模型路径
+  base_model: "Qwen/Qwen-7B-Chat"  # 基础模型（用于对比）
+  trust_remote_code: true
+  torch_dtype: "bfloat16"
+
+# 评测数据集
+evaluation_datasets:
+  # 指令跟随能力评测
+  instruction_following:
+    - name: "alpaca_eval"
+      path: "tatsu-lab/alpaca_eval"
+      split: "eval"
+      metrics: ["win_rate", "length_controlled_winrate"]
+    
+    - name: "vicuna_bench"
+      path: "lmsys/vicuna_bench"
+      split: "test"
+      metrics: ["gpt4_score", "human_preference"]
+  
+  # 通用能力评测
+  general_ability:
+    - name: "mmlu"
+      path: "cais/mmlu"
+      split: "test"
+      metrics: ["accuracy", "macro_f1"]
+    
+    - name: "hellaswag"
+      path: "Rowan/hellaswag"
+      split: "validation"
+      metrics: ["accuracy", "normalized_accuracy"]
+    
+    - name: "arc_challenge"
+      path: "ai2_arc"
+      subset: "ARC-Challenge"
+      split: "test"
+      metrics: ["accuracy"]
+  
+  # 中文能力评测
+  chinese_ability:
+    - name: "ceval"
+      path: "ceval/ceval-exam"
+      split: "val"
+      metrics: ["accuracy", "subject_accuracy"]
+    
+    - name: "cmmlu"
+      path: "haonan-li/cmmlu"
+      split: "test"
+      metrics: ["accuracy", "subject_accuracy"]
+  
+  # 代码能力评测
+  coding_ability:
+    - name: "humaneval"
+      path: "openai_humaneval"
+      split: "test"
+      metrics: ["pass@1", "pass@10", "pass@100"]
+    
+    - name: "mbpp"
+      path: "mbpp"
+      split: "test"
+      metrics: ["pass@1", "pass@10"]
+  
+  # 数学能力评测
+  math_ability:
+    - name: "gsm8k"
+      path: "gsm8k"
+      subset: "main"
+      split: "test"
+      metrics: ["accuracy"]
+    
+    - name: "math"
+      path: "hendrycks/math"
+      split: "test"
+      metrics: ["accuracy", "subject_accuracy"]
+
+# 自动评测指标
+automatic_metrics:
+  # 文本生成质量
+  text_quality:
+    - name: "bleu"
+      variants: ["bleu-1", "bleu-2", "bleu-3", "bleu-4"]
+    
+    - name: "rouge"
+      variants: ["rouge-1", "rouge-2", "rouge-l"]
+    
+    - name: "bert_score"
+      model: "microsoft/deberta-xlarge-mnli"
+    
+    - name: "bleurt"
+      checkpoint: "BLEURT-20"
+  
+  # 语言模型指标
+  language_model:
+    - name: "perplexity"
+      stride: 512
+    
+    - name: "cross_entropy_loss"
+  
+  # 多样性指标
+  diversity:
+    - name: "distinct_n"
+      n_values: [1, 2, 3, 4]
+    
+    - name: "self_bleu"
+      sample_size: 1000
+
+# 推理配置
+inference_config:
+  batch_size: 8
+  max_new_tokens: 512
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 50
+  repetition_penalty: 1.1
+  num_return_sequences: 1
+
+# 评测设置
+evaluation_settings:
+  output_dir: "./results/evaluation"
+  save_predictions: true
+  save_detailed_results: true
+  
+  # 采样设置
+  max_samples_per_dataset: 1000  # 每个数据集最多评测样本数
+  random_seed: 42
+  
+  # 并行设置
+  num_workers: 4
+  batch_size: 8
+  
+  # 比较设置
+  compare_with_baseline: true
+  baseline_models:
+    - "Qwen/Qwen-7B-Chat"  # 原始模型
+    - "meta-llama/Llama-2-7b-chat-hf"  # 其他基线模型
+
+# 报告配置
+reporting:
+  generate_html_report: true
+  generate_json_report: true
+  generate_csv_report: true
+  
+  # 可视化
+  plot_metrics: true
+  plot_comparisons: true
+  
+  # 详细分析
+  error_analysis: true
+  case_study_samples: 50
+  
+# 人工评估（可选）
+human_evaluation:
+  enable: false
+  sample_size: 100
+  evaluators: 3
+  criteria:
+    - "helpfulness"
+    - "harmlessness"
+    - "honesty"
+    - "factuality"
+    - "coherence"
