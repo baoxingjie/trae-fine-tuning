@@ -69,13 +69,18 @@ quantization:
   bnb_4bit_use_double_quant: true
   bnb_4bit_quant_type: "nf4"
 
-# MindSpeed配置
-mindspeed:
-  enable: true
-  parallel_mode: "data_parallel"  # 数据并行
-  tensor_parallel_size: 1
-  pipeline_parallel_size: 1
-  micro_batch_size: 1
+# 个人PC环境配置
+pc_environment:
+  # 推荐配置
+  gpu: "RTX A5000 16GB"  # 或其他16GB+显卡
+  cpu: "Intel i7/i9 或 AMD Ryzen 7/9"
+  ram: "32GB DDR4/DDR5"
+  storage: "1TB NVMe SSD"
+  
+  # 最低配置
+  min_gpu: "RTX 3060 12GB"
+  min_ram: "16GB"
+  min_storage: "500GB"
   
 # 监控和日志
 logging:
@@ -83,7 +88,7 @@ logging:
   logging_dir: "./results/logs"
   run_name: "qwen_finetune_experiment"
   
-# 环境配置 (针对RTX A5000优化)
+# 环境配置 (针对个人PC优化)
 environment:
   seed: 42
   dataloader_num_workers: 0  # 设置为0避免Windows下的多进程pickle错误
