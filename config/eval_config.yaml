@@ -3,7 +3,7 @@
 # 模型配置
 model:
   model_path: "./results/checkpoints"  # 微调后的模型路径
-  base_model: "Qwen/Qwen-7B-Chat"  # 基础模型（用于对比）
+  base_model: "Qwen/Qwen2-0.5B"  # 基础模型（用于对比）
   trust_remote_code: true
   torch_dtype: "bfloat16"
 

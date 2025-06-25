@@ -2,32 +2,30 @@
 
 # 模型配置
 model:
-  model_name_or_path: "Qwen/Qwen-7B-Chat"  # 基础模型路径
-  model_type: "qwen"
+  model_name_or_path: "Qwen/Qwen2-0.5B"  # 基础模型路径
+  model_type: "qwen2"
   trust_remote_code: true
   torch_dtype: "bfloat16"  # 使用bfloat16精度
-  attn_implementation: "eager"  # 使用标准attention实现，Qwen不支持flash_attention_2
+  attn_implementation: "eager"  # 使用标准attention实现
 
 # 数据配置
 data:
-  dataset_name: "alpaca_gpt4_data"  # 主要数据集
-  additional_datasets:
-    - "OpenAssistant/oasst1"
-    - "yahma/alpaca-cleaned"
-  max_seq_length: 2048
+  dataset_name: "chinese_alpaca"  # 主要数据集
+  additional_datasets: []
+  max_seq_length: 1024
   train_split: "train"
   validation_split: "validation"
   test_split: "test"
   data_cache_dir: "./data/cache"
 
-# 训练参数 (针对RTX A5000 16GB优化)
+# 训练参数 (针对0.5B小模型优化)
 training:
   output_dir: "./results/checkpoints"
-  num_train_epochs: 3
-  per_device_train_batch_size: 6  # 增加批次大小，充分利用16GB显存
-  per_device_eval_batch_size: 12  # 评估时可以使用更大批次
-  gradient_accumulation_steps: 3  # 调整梯度累积，保持有效批次大小18
-  learning_rate: 0.00003  # 稍微提高学习率，配合更大批次
+  num_train_epochs: 2
+  per_device_train_batch_size: 4  # 减小批次大小避免训练卡住
+  per_device_eval_batch_size: 8  # 评估时使用较小批次
+  gradient_accumulation_steps: 4  # 增加梯度累积保持有效批次大小
+  learning_rate: 0.0002  # 小模型使用更高学习率
   weight_decay: 0.01
   warmup_ratio: 0.1
   lr_scheduler_type: "cosine"
@@ -47,17 +45,20 @@ training:
   adam_epsilon: 1e-8
   max_grad_norm: 1.0
 
-# LoRA配置 (针对RTX A5000优化)
+# LoRA配置 (针对0.5B小模型优化)
 lora:
   use_lora: true
-  r: 32  # 增加LoRA秩，提升模型表达能力
-  lora_alpha: 64  # 相应调整alpha值
-  lora_dropout: 0.05  # 降低dropout，利用更大显存
+  r: 8  # 小模型使用较小的LoRA秩
+  lora_alpha: 16  # 相应调整alpha值
+  lora_dropout: 0.1  # 适当增加dropout防止过拟合
   target_modules:
-    - "c_attn"  # Qwen的注意力投影层
-    - "c_proj"  # Qwen的输出投影层
-    - "w1"      # Qwen的MLP第一层
-    - "w2"      # Qwen的MLP第二层
+    - "q_proj"  # Qwen2的查询投影层
+    - "k_proj"  # Qwen2的键投影层
+    - "v_proj"  # Qwen2的值投影层
+    - "o_proj"  # Qwen2的输出投影层
+    - "gate_proj"  # Qwen2的门控投影层
+    - "up_proj"    # Qwen2的上投影层
+    - "down_proj"  # Qwen2的下投影层
   bias: "none"
   task_type: "CAUSAL_LM"
 
@@ -86,6 +87,7 @@ logging:
 environment:
   seed: 42
   dataloader_num_workers: 0  # 设置为0避免Windows下的多进程pickle错误
+  dataloader_drop_last: false  # 不丢弃最后一个不完整的批次
   remove_unused_columns: false
   fp16: false
   bf16: true  # RTX A5000原生支持bfloat16

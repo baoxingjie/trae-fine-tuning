@@ -281,13 +281,14 @@ def main():
     parser = argparse.ArgumentParser(description="预处理训练数据")
     parser.add_argument("--input-dir", default="./data/cache", help="输入数据目录")
     parser.add_argument("--output-dir", default="./data/processed", help="输出数据目录")
-    parser.add_argument("--tokenizer", default="Qwen/Qwen-7B-Chat", help="分词器名称")
+    parser.add_argument("--tokenizer", default="Qwen/Qwen2-0.5B", help="分词器名称或路径")
     parser.add_argument("--max-length", type=int, default=2048, help="最大序列长度")
     parser.add_argument("--min-length", type=int, default=10, help="最小序列长度")
     parser.add_argument("--train-ratio", type=float, default=0.9, help="训练集比例")
     parser.add_argument("--val-ratio", type=float, default=0.05, help="验证集比例")
     parser.add_argument("--test-ratio", type=float, default=0.05, help="测试集比例")
     parser.add_argument("--datasets", nargs="+", help="要处理的数据集名称")
+    parser.add_argument("--sample-ratio", type=float, default=1.0, help="数据采样比例 (0.01表示使用1%的数据)")
     
     args = parser.parse_args()
     
@@ -366,6 +367,13 @@ def main():
                 min_length=args.min_length,
                 max_length=args.max_length
             )
+            
+            # 数据采样
+            if args.sample_ratio < 1.0:
+                sample_size = int(len(filtered_dataset) * args.sample_ratio)
+                sample_size = max(sample_size, 100)  # 至少保留100个样本
+                filtered_dataset = filtered_dataset.shuffle(seed=42).select(range(sample_size))
+                print(f"采样后: {len(filtered_dataset)} 样本 (采样比例: {args.sample_ratio:.1%})")
             
             all_datasets.append(filtered_dataset)
             
